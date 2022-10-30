@@ -8,6 +8,9 @@ implements the "Load" and "Flip Vertical" buttons.
 from filechooser import choose_input_file
 from pgl import GWindow, GImage, GRect
 from button import GButton
+from PIL import Image, ImageOps
+from GrayscaleImage import create_grayscale_image, luminance
+from itertools import accumulate
 
 # Constants
 
@@ -50,10 +53,49 @@ def image_shop():
         if filename != "":
             set_image(GImage(filename))
 
+    def clear_action():
+        """Callback function for the Clear button"""
+        if gw.current_image is not None:
+            set_image(clear(gw.current_image))
+
     def flip_vertical_action():
         """Callback function for the Flip Vertical button"""
         if gw.current_image is not None:
             set_image(flip_vertical(gw.current_image))
+
+    def flip_horizontal_action():
+        """Callback function for the Flip Horizontal button"""
+        if gw.current_image is not None:
+            set_image(flip_horizontal(gw.current_image))
+
+    def rotate_left_action():
+        if gw.current_image is not None:
+            set_image(rotate_left(gw.current_image))
+    
+    def rotate_right_action():
+        if gw.current_image is not None:
+            set_image(rotate_right(gw.current_image))
+
+    def grayscale_action():
+        if gw.current_image is not None:
+            set_image(create_grayscale_image(gw.current_image))
+    
+    def green_screen_action():
+        gimage = choose_input_file()
+        if gw.current_image is not None and gimage != "":
+            set_image(green_screen(gw.current_image, GImage(gimage)))
+
+    def equalize_action():
+        if gw.current_image is not None:
+            set_image(equalize(gw.current_image))
+
+    def color_negative_action():
+        if gw.current_image is not None:
+            set_image(color_negative(gw.current_image))
+
+    def correct_red_eye_effect_action():
+        if gw.current_image is not None:
+            set_image(correct_red_eye_effect(gw.current_image))
 
     gw = GWindow(GWINDOW_WIDTH, GWINDOW_HEIGHT)
     button_area = GRect(0, 0, BUTTON_AREA_WIDTH, GWINDOW_HEIGHT)
@@ -63,14 +105,141 @@ def image_shop():
     gw.next_button_y = BUTTON_MARGIN
     gw.current_image = None
     add_button("Load", load_button_action)
+    add_button("Clear", clear_action)
     add_button("Flip Vertical", flip_vertical_action)
+    add_button("Flip Horizontal", flip_horizontal_action)
+    add_button("Rotate Left", rotate_left_action)
+    add_button("Rotate Right", rotate_right_action)
+    add_button("Grayscale", grayscale_action)
+    add_button("Green Screen", green_screen_action)
+    add_button("Equalize", equalize_action)
+    add_button("Color Negative", color_negative_action)
+    add_button("Red Eye Corrector", correct_red_eye_effect_action)
+
+def clear(image):
+    """clears canvas"""
+    new_img = Image.new("RGB", image._image.size, (255, 255, 255))
+    image._image = new_img
+    array = image.get_pixel_array()
+    return GImage(array)
 
 def flip_vertical(image):
     """Creates a new GImage by flipping image vertically."""
     array = image.get_pixel_array()
     return GImage(array[::-1])
 
-# Startup code
+def flip_horizontal(image):
+    """Creates a ew GImage by flipping image horizontally"""
+    img = image._image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    image._image = img
+    array = image.get_pixel_array()
+    return GImage(array)
+
+def rotate_left(image):
+    img = image._image.transpose(Image.Transpose.ROTATE_270)
+    image._image = img
+    array = image.get_pixel_array()
+    return GImage(array)
+
+def rotate_right(image):
+    img = image._image.transpose(Image.Transpose.ROTATE_90)
+    image._image = img
+    array = image.get_pixel_array()
+    return GImage(array)
+
+def green_screen(image, gimage):
+    # background
+    overlay_array = image.get_pixel_array()
+    oheight = len(overlay_array)
+    owidth = len(overlay_array[0])
+    # image with green screen
+    g_array = gimage.get_pixel_array()
+    gheight = len(g_array)
+    gwidth = len(g_array[0])
+
+    for ni in range(oheight):
+        for nj in range(owidth):
+            opixel = g_array[ni][nj]
+            r = GImage.get_red(opixel)
+            g = GImage.get_green(opixel)
+            b = GImage.get_blue(opixel)
+
+            try:
+                greenIntensity = g / ((r + b) / 2)
+            except ZeroDivisionError:
+                greenIntensity = g
+
+            if greenIntensity < 1.5:
+                overlay_array[ni][nj] = opixel
+    return GImage(overlay_array)
+ 
+def pixel_counter(h, w):
+    count = 0
+    for i in range(h):
+        for j in range(w):
+            count += 1
+    return count
+
+def create_img_histogram(array, h, w):
+    img_histogram = []
+    # iterate through intensity values
+    for k in range(0, 256):
+        count1 = 0
+        for i in range(h):
+            for j in range(w):
+                if luminance(array[i][j]) == k:
+                    count1 += 1
+        img_histogram.append(count1)
+    return img_histogram
+
+
+def equalize(image):
+    array = image.get_pixel_array()
+    height = len(array)
+    width = len(array[0])
+
+    P = pixel_counter(height, width)
+
+    img_histogram = create_img_histogram(array, height, width)
+
+    cumulative_histogram = [x for x in accumulate(img_histogram)]
+
+    for i in range(height):
+        for j in range(width):
+            pixel = array[i][j]
+            L = luminance(pixel)
+
+            nl = round((255 * cumulative_histogram[L]) / P)
+
+            array[i][j] = GImage.create_rgb_pixel(nl, nl, nl)
+
+    return GImage(array)
+
+def color_negative(image):
+    new_img = Image.new("RGB", image._image.size, (255, 255, 255))
+    new_img.paste(image._image, mask=image._image.split()[3])
+    inv_img = ImageOps.invert(new_img)
+    image._image = inv_img
+    array = image.get_pixel_array()
+    return GImage(array)
+
+def correct_red_eye_effect(image):
+    array = image.get_pixel_array()
+    height = len(array)
+    width = len(array[0])
+    for i in range(height):
+        for j in range(width):
+            pixel = array[i][j]
+            r = GImage.get_red(pixel)
+            g = GImage.get_green(pixel)
+            b = GImage.get_blue(pixel)
+            redIntensity = r / ((g + b) / 2)
+            if redIntensity > 1.5:
+                rr = max(g ,b)
+                array[i][j] = GImage.create_rgb_pixel(rr, g, b)
+    return GImage(array)
+
+# Startup code  
 
 if __name__ == "__main__":
     image_shop()
