@@ -131,7 +131,7 @@ def flip_vertical(image):
     return GImage(array[::-1])
 
 def flip_horizontal(image):
-    """Creates a ew GImage by flipping image horizontally"""
+    """Creates a GImage by flipping image horizontally"""
     array = image.get_pixel_array()
     height = len(array)
     width = len(array[0])
@@ -155,6 +155,7 @@ def flip_horizontal(image):
     return GImage(array)
 
 def rotate_left(image):
+    """Rotates Image to the left (90 degrees)"""
     array = image.get_pixel_array()
 
     array = [list(row) for row in zip(*array)][::-1]
@@ -162,6 +163,7 @@ def rotate_left(image):
     return GImage(array)
 
 def rotate_right(image):
+    """Rotates Image to the right (270 degrees)"""
     array = image.get_pixel_array()
 
     for _ in range(2 + 1):
@@ -170,6 +172,7 @@ def rotate_right(image):
     return GImage(array)
 
 def green_screen(image, gimage):
+    """Applies a image w/ green screen to overlay image"""
     # background
     overlay_array = image.get_pixel_array()
     oheight = len(overlay_array)
@@ -216,6 +219,7 @@ def create_img_histogram(array, h, w):
 
 
 def equalize(image):
+    """Equalizes a grayscale image through histogram equalization"""
     array = image.get_pixel_array()
     height = len(array)
     width = len(array[0])
@@ -238,6 +242,7 @@ def equalize(image):
     return GImage(array)
 
 def color_negative(image):
+    """Inverts Image colors"""
     array = image.get_pixel_array()
     height = len(array)
     width = len(array[0])
@@ -257,6 +262,7 @@ def color_negative(image):
     return GImage(array)
 
 def correct_red_eye_effect(image):
+    """Corrects red  eye effect if present in image"""
     array = image.get_pixel_array()
     height = len(array)
     width = len(array[0])
