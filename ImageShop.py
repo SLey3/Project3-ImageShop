@@ -8,7 +8,6 @@ implements the "Load" and "Flip Vertical" buttons.
 from filechooser import choose_input_file
 from pgl import GWindow, GImage, GRect
 from button import GButton
-from PIL import Image, ImageOps
 from GrayscaleImage import create_grayscale_image, luminance
 from itertools import accumulate
 
@@ -118,10 +117,13 @@ def image_shop():
 
 def clear(image):
     """clears canvas"""
-    new_img = Image.new("RGB", image._image.size, (255, 255, 255))
-    image._image = new_img
     array = image.get_pixel_array()
-    return GImage(array)
+    height = len(array)
+    width = len(array[0])
+
+    new_array = [[0 for j in range(width)] for i in range(height)]
+
+    return GImage(new_array)
 
 def flip_vertical(image):
     """Creates a new GImage by flipping image vertically."""
@@ -236,11 +238,22 @@ def equalize(image):
     return GImage(array)
 
 def color_negative(image):
-    new_img = Image.new("RGB", image._image.size, (255, 255, 255))
-    new_img.paste(image._image, mask=image._image.split()[3])
-    inv_img = ImageOps.invert(new_img)
-    image._image = inv_img
     array = image.get_pixel_array()
+    height = len(array)
+    width = len(array[0])
+
+    for i in range(height):
+        for j in range(width):
+            old_pixel = array[i][j]
+
+            r = GImage.get_red(old_pixel)
+            g = GImage.get_green(old_pixel)
+            b = GImage.get_blue(old_pixel)
+
+            new_pixel = GImage.create_rgb_pixel(255 - r, 255 - g, 255 - b)
+
+            array[i][j] = new_pixel
+
     return GImage(array)
 
 def correct_red_eye_effect(image):
