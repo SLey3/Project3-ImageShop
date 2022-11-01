@@ -34,7 +34,6 @@ def create_grayscale_image(image):
     for i in range(height):
         for j in range(width):
             gray = luminance(array[i][j])
-            print(gray)
             array[i][j] = GImage.create_rgb_pixel(gray, gray, gray)
     return GImage(array)
 

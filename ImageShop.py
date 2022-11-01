@@ -130,21 +130,41 @@ def flip_vertical(image):
 
 def flip_horizontal(image):
     """Creates a ew GImage by flipping image horizontally"""
-    img = image._image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-    image._image = img
     array = image.get_pixel_array()
+    height = len(array)
+    width = len(array[0])
+
+    for i in range(height):
+        for j in range(width // 2):
+            old_pos = array[i][j]
+            new_pos = array[i][width-j-1]
+            
+            o_r = GImage.get_red(old_pos)
+            o_g = GImage.get_green(old_pos)
+            o_b = GImage.get_blue(old_pos)
+
+            n_r = GImage.get_red(new_pos)
+            n_g = GImage.get_green(new_pos)
+            n_b = GImage.get_blue(new_pos)
+
+            array[i][j] = GImage.create_rgb_pixel(n_r, n_g, n_b)
+            array[i][width-j-1] = GImage.create_rgb_pixel(o_r, o_g, o_b)
+    
     return GImage(array)
 
 def rotate_left(image):
-    img = image._image.transpose(Image.Transpose.ROTATE_270)
-    image._image = img
     array = image.get_pixel_array()
+
+    array = [list(row) for row in zip(*array)][::-1]
+
     return GImage(array)
 
 def rotate_right(image):
-    img = image._image.transpose(Image.Transpose.ROTATE_90)
-    image._image = img
     array = image.get_pixel_array()
+
+    for _ in range(2 + 1):
+        array = [list(row) for row in zip(*array)][::-1]
+
     return GImage(array)
 
 def green_screen(image, gimage):
@@ -202,7 +222,7 @@ def equalize(image):
 
     img_histogram = create_img_histogram(array, height, width)
 
-    cumulative_histogram = [x for x in accumulate(img_histogram)]
+    cumulative_histogram = list(accumulate(img_histogram))
 
     for i in range(height):
         for j in range(width):
@@ -233,7 +253,12 @@ def correct_red_eye_effect(image):
             r = GImage.get_red(pixel)
             g = GImage.get_green(pixel)
             b = GImage.get_blue(pixel)
-            redIntensity = r / ((g + b) / 2)
+
+            try:
+                redIntensity = r / ((g + b) / 2)
+            except ZeroDivisionError:
+                redIntensity = r
+
             if redIntensity > 1.5:
                 rr = max(g ,b)
                 array[i][j] = GImage.create_rgb_pixel(rr, g, b)
